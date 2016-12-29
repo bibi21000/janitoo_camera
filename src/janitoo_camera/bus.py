@@ -55,7 +55,7 @@ assert(COMMAND_DESC[COMMAND_EVENT_CONTROLLER_CONF] == 'COMMAND_EVENT_CONTROLLER_
 assert(COMMAND_DESC[COMMAND_CONFIGURATION] == 'COMMAND_CONFIGURATION')
 ##############################################################
 
-from janitoo_sms import OID
+from janitoo_camera import OID
 
 class CameraBus(JNTBus):
     """A pseudo-bus to manage all sms

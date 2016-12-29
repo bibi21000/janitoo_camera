@@ -89,7 +89,7 @@ class NetworkCameraComponent(CameraComponent):
         bus = kwargs.pop('bus', bus)
         default_user = kwargs.pop('default_user', "admin")
         default_passwd = kwargs.pop('default_passwd', "")
-        default_port = kwargs.pop('default_port', 80)
+        default_port = kwargs.pop('default_port', 10080)
         CameraComponent.__init__(self, oid=oid, bus=bus, name=name, hearbeat=hearbeat,
                 product_name=product_name, **kwargs)
         logger.debug("[%s] - __init__ node uuid:%s", self.__class__.__name__, self.uuid)
@@ -143,7 +143,7 @@ class OnvifComponent(NetworkCameraComponent):
         product_name = kwargs.pop('product_name', "Onvif camera")
         NetworkCameraComponent.__init__(self, oid=oid, bus=bus, name=name,
                 product_name=product_name, **kwargs)
-        self.mycam = ONVIFCamera(self.values['ip_ping_config'].data, self.values['port'].data, self.values['user'].data, self.values['passwd'].data, '/usr/local/wsdl/')
+        self.mycam = ONVIFCamera(self.values['ip_ping_config'].data, self.values['port'].data, self.values['user'].data, self.values['passwd'].data, wsdl_dir='/usr/local/wsdl/')
 
     #~ def check_heartbeat(self):
         #~ """Check that the component is 'available'
