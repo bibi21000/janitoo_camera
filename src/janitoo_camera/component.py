@@ -143,7 +143,8 @@ class OnvifComponent(NetworkCameraComponent):
         product_name = kwargs.pop('product_name', "Onvif camera")
         NetworkCameraComponent.__init__(self, oid=oid, bus=bus, name=name,
                 product_name=product_name, **kwargs)
-        self.mycam = ONVIFCamera(self.values['ip_ping_config'].data, self.values['port'].data, self.values['user'].data, self.values['passwd'].data, wsdl_dir='/usr/local/wsdl/')
+        self.mycam = None
+        #~ self.mycam = ONVIFCamera(self.values['ip_ping_config'].data, self.values['port'].data, self.values['user'].data, self.values['passwd'].data, wsdl_dir='/usr/local/wsdl/')
 
     #~ def check_heartbeat(self):
         #~ """Check that the component is 'available'
