@@ -130,7 +130,7 @@ class NetworkCameraComponent(CameraComponent):
         """Check that the component is 'available'
 
         """
-        return self.values['userid'].data
+        return self.values['ip_ping_config'].data
 
 class OnvifComponent(NetworkCameraComponent):
     """ An Onvif camera component"""
