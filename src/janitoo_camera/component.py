@@ -31,9 +31,6 @@ logger = logging.getLogger(__name__)
 import os
 import time
 import datetime
-import urllib2 as urllib
-from urllib2 import Request as request
-
 from onvif import ONVIFCamera
 
 from janitoo.bus import JNTBus
@@ -129,7 +126,7 @@ class NetworkCameraComponent(CameraComponent):
         """Check that the component is 'available'
 
         """
-        return self.values['ip_ping_config'].data
+        return self.values['ip_ping'].data
 
 class OnvifComponent(NetworkCameraComponent):
     """ An Onvif camera component"""
