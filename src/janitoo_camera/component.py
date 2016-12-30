@@ -59,14 +59,14 @@ def make_onvif(**kwargs):
 class CameraComponent(JNTComponent):
     """ A Camera component"""
 
-    def __init__(self, bus=None, **kwargs):
+    def __init__(self, **kwargs):
         """
         """
         oid = kwargs.pop('oid', '%s.generic'%OID)
         name = kwargs.pop('name', "Generic camera")
         product_name = kwargs.pop('product_name', "Generic camera")
         hearbeat = kwargs.pop('hearbeat', 900)
-        bus = kwargs.pop('bus', bus)
+        bus = kwargs.pop('bus', None)
         JNTComponent.__init__(self, oid=oid, bus=bus, name=name, hearbeat=hearbeat,
                 product_name=product_name, **kwargs)
         logger.debug("[%s] - __init__ node uuid:%s", self.__class__.__name__, self.uuid)
@@ -79,18 +79,17 @@ class CameraComponent(JNTComponent):
 class NetworkCameraComponent(CameraComponent):
     """ A network Camera component"""
 
-    def __init__(self, bus=None, **kwargs):
+    def __init__(self, **kwargs):
         """
         """
         oid = kwargs.pop('oid', '%s.network'%OID)
         name = kwargs.pop('name', "Network camera")
         product_name = kwargs.pop('product_name', "Network camera")
         hearbeat = kwargs.pop('hearbeat', 900)
-        bus = kwargs.pop('bus', bus)
         default_user = kwargs.pop('default_user', "admin")
         default_passwd = kwargs.pop('default_passwd', "")
         default_port = kwargs.pop('default_port', 10080)
-        CameraComponent.__init__(self, oid=oid, bus=bus, name=name, hearbeat=hearbeat,
+        CameraComponent.__init__(self, oid=oid, name=name, hearbeat=hearbeat,
                 product_name=product_name, **kwargs)
         logger.debug("[%s] - __init__ node uuid:%s", self.__class__.__name__, self.uuid)
         uuid="ip_ping"
@@ -135,13 +134,13 @@ class NetworkCameraComponent(CameraComponent):
 class OnvifComponent(NetworkCameraComponent):
     """ An Onvif camera component"""
 
-    def __init__(self, bus=None, **kwargs):
+    def __init__(self, **kwargs):
         """
         """
         oid = kwargs.pop('oid', '%s.onvif'%OID)
         name = kwargs.pop('name', "Onvif camera")
         product_name = kwargs.pop('product_name', "Onvif camera")
-        NetworkCameraComponent.__init__(self, oid=oid, bus=bus, name=name,
+        NetworkCameraComponent.__init__(self, oid=oid, name=name,
                 product_name=product_name, **kwargs)
         self.mycam = None
         #~ self.mycam = ONVIFCamera(self.values['ip_ping_config'].data, self.values['port'].data, self.values['user'].data, self.values['passwd'].data, wsdl_dir='/usr/local/wsdl/')
