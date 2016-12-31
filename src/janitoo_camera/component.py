@@ -114,6 +114,14 @@ class NetworkCameraComponent(CameraComponent):
             label='Pwd',
             default=default_passwd,
         )
+        uuid="streamuri"
+        self.values[uuid] = self.value_factory['sensor_string'](options=self.options, uuid=uuid,
+            node_uuid=self.uuid,
+            help='The stream URI of your camera',
+            label='Stream',
+            default=None,
+            get_data_cb=self.get_stream_uri,
+        )
         uuid="port"
         self.values[uuid] = self.value_factory['config_integer'](options=self.options, uuid=uuid,
             node_uuid=self.uuid,
@@ -121,6 +129,10 @@ class NetworkCameraComponent(CameraComponent):
             label='Port',
             default=default_passwd,
         )
+
+    def get_stream_uri(self, node_uuid, index):
+        """ Retrieve stream_uri """
+        return None
 
     def check_heartbeat(self):
         """Check that the component is 'available'
@@ -142,6 +154,18 @@ class OnvifComponent(NetworkCameraComponent):
         self.mycam = None
         #~ self.mycam = ONVIFCamera(self.values['ip_ping_config'].data, self.values['port'].data, self.values['user'].data, self.values['passwd'].data, wsdl_dir='/usr/local/wsdl/')
 
+    def get_stream_uri(self, node_uuid, index):
+        """ Retrieve stream_uri """
+        try:
+            mycam = ONVIFCamera(self.values['ip_ping_config'].data, self.values['port'].data, self.values['user'].data, self.values['passwd'].data, wsdl_dir='/usr/local/wsdl/')
+            media_service = mycam.create_media_service()
+            profiles = media_service.GetProfiles()
+            # Use the first profile and Profiles have at least one
+            token = profiles[0]._token
+            return media_service.GetStreamUri({'StreamSetup':{'StreamType':'RTP_unicast','TransportProtocol':'UDP'},'ProfileToken':token})
+        except Exception:
+            logger.exception('[%s] - Exception when checking heartbeat')
+            return None
     #~ def check_heartbeat(self):
         #~ """Check that the component is 'available'
         #~ """
