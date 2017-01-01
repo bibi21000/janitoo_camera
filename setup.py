@@ -90,6 +90,7 @@ setup(
                      'janitoo_factory',
                      'janitoo_factory_exts',
                      'onvif',
+                     'opencv',
                     ],
     entry_points = {
         "janitoo.components": [
