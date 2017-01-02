@@ -31,10 +31,11 @@ logger = logging.getLogger(__name__)
 import os
 import time
 import datetime
+import threading
 
-import cv2
 import imutils
 from onvif import ONVIFCamera
+import cv2
 
 from janitoo.bus import JNTBus
 from janitoo.value import JNTValue, value_config_poll
@@ -47,8 +48,10 @@ from janitoo.component import JNTComponent
 from janitoo.classes import COMMAND_DESC
 
 COMMAND_NOTIFY = 0x3010
+COMMAND_CAMERA_STREAM = 0x2203
 
 assert(COMMAND_DESC[COMMAND_NOTIFY] == 'COMMAND_NOTIFY')
+assert(COMMAND_DESC[COMMAND_CAMERA_STREAM] == 'COMMAND_CAMERA_STREAM')
 ##############################################################
 
 from janitoo_camera import OID
@@ -71,13 +74,25 @@ class CameraComponent(JNTComponent):
         JNTComponent.__init__(self, oid=oid, bus=bus, name=name, hearbeat=hearbeat,
                 product_name=product_name, **kwargs)
         logger.debug("[%s] - __init__ node uuid:%s", self.__class__.__name__, self.uuid)
-        uuid="%s_blank_image"%OID
+        uuid="blank_image"
         self.values[uuid] = self.value_factory['config_string'](options=self.options, uuid=uuid,
             node_uuid=self.uuid,
             help='The blank image',
             label='Blk img',
             default=default_blank_image,
         )
+        uuid="actions"
+        self.values[uuid] = self.value_factory['action_list'](options=self.options, uuid=uuid,
+            node_uuid=self.uuid,
+            help='The action on the camera',
+            label='Actions',
+            list_items=['start', 'stop', 'init'],
+            set_data_cb=self.set_action,
+            is_writeonly = True,
+            cmd_class=COMMAND_CAMERA_STREAM,
+            genre=0x01,
+        )
+        self._camera_lock =  threading.Lock()
 
     def check_heartbeat(self):
         """Check that the component is 'available'
@@ -96,11 +111,60 @@ class CameraComponent(JNTComponent):
             os.makedirs(dirname)
         return JNTComponent.start(self, mqttc)
 
-    def stop(self):
-        """Stop the component.
+    def reload_stream(self):
+        """ Reload the http server """
+        self.http_acquire()
+        try:
+            if self.http_server is not None:
+                self.http_server.trigger_reload()
+                return True
+        finally:
+            self.http_release()
 
+    def start_stream(self):
+        """ Start the http server """
+        self.http_acquire()
+        try:
+            if self.http_server is None:
+                self.http_server = HttpServerThread("http_server", self.options.data)
+                self.http_server.config(host=self.values["host"%OID].data, port=self.values["port"%OID].data)
+                self.http_server.start()
+                self.export_attrs('http_server', self.http_server)
+                return True
+        finally:
+            self.http_release()
+
+    def stop(self):
+        """ Stop the bus """
+        JNTBus.stop(self)
+        self.stop_http_server()
+
+    def stop_stream(self):
+        """ Stop the http server """
+        self.http_acquire()
+        try:
+            if self.http_server is not None:
+                try:
+                    self.http_server.stop()
+                except Exception:
+                    logger.exception("[%s] - stop_server:%s", self.__class__.__name__)
+                self.http_server = None
+                self.export_attrs('http_server', self.http_server)
+                return True
+        finally:
+            self.http_release()
+
+    def set_action(self, node_uuid, index, data):
+        """Act on the server
         """
-        return JNTComponent.stop(self)
+        params = {}
+        if data == "start":
+            if self.mqttc is not None:
+                self.start_http_server()
+        elif data == "stop":
+            self.stop_http_server()
+        elif data == "reload":
+            self.reload_http_server()
 
 class NetworkCameraComponent(CameraComponent):
     """ A network Camera component"""
@@ -118,7 +182,7 @@ class NetworkCameraComponent(CameraComponent):
         CameraComponent.__init__(self, oid=oid, name=name, hearbeat=hearbeat,
                 product_name=product_name, **kwargs)
         logger.debug("[%s] - __init__ node uuid:%s", self.__class__.__name__, self.uuid)
-        uuid="%s_ip_ping"%OID
+        uuid="ip_ping"
         self.values[uuid] = self.value_factory['ip_ping'](options=self.options, uuid=uuid,
             node_uuid=self.uuid,
             help='Ping the network camera',
@@ -129,21 +193,21 @@ class NetworkCameraComponent(CameraComponent):
         self.values[config_value.uuid] = config_value
         poll_value = self.values[uuid].create_poll_value()
         self.values[poll_value.uuid] = poll_value
-        uuid="%s_user"%OID
+        uuid="user"
         self.values[uuid] = self.value_factory['config_string'](options=self.options, uuid=uuid,
             node_uuid=self.uuid,
             help='The user of your camera',
             label='User',
             default=default_user,
         )
-        uuid="%s_passwd"%OID
+        uuid="passwd"
         self.values[uuid] = self.value_factory['config_string'](options=self.options, uuid=uuid,
             node_uuid=self.uuid,
             help='The passwd of your camera',
             label='Pwd',
             default=default_passwd,
         )
-        uuid="%s_streamuri"%OID
+        uuid="streamuri"
         self.values[uuid] = self.value_factory['sensor_string'](options=self.options, uuid=uuid,
             node_uuid=self.uuid,
             help='The stream URI of your camera',
@@ -151,7 +215,7 @@ class NetworkCameraComponent(CameraComponent):
             default=None,
             get_data_cb=self.get_stream_uri,
         )
-        uuid="%s_port"%OID
+        uuid="port"
         self.values[uuid] = self.value_factory['config_integer'](options=self.options, uuid=uuid,
             node_uuid=self.uuid,
             help='The port of your camera',
@@ -167,7 +231,7 @@ class NetworkCameraComponent(CameraComponent):
         """Check that the component is 'available'
 
         """
-        return self.values['%s_ip_ping'%OID].data
+        return self.values['ip_ping'%OID].data
 
 class OnvifComponent(NetworkCameraComponent):
     """ An Onvif camera component"""
@@ -186,13 +250,13 @@ class OnvifComponent(NetworkCameraComponent):
     def get_stream_uri(self, node_uuid, index):
         """ Retrieve stream_uri """
         try:
-            mycam = ONVIFCamera(self.values['%s_ip_ping_config'%OID].data, self.values['%s_port'%OID].data, self.values['%s_user'%OID].data, self.values['%s_passwd'%OID].data, wsdl_dir='/usr/local/wsdl/')
+            mycam = ONVIFCamera(self.values['ip_ping_config'%OID].data, self.values['port'%OID].data, self.values['user'%OID].data, self.values['passwd'%OID].data, wsdl_dir='/usr/local/wsdl/')
             media_service = mycam.create_media_service()
             profiles = media_service.GetProfiles()
             # Use the first profile and Profiles have at least one
             token = profiles[0]._token
             suri = media_service.GetStreamUri({'StreamSetup':{'StreamType':'RTP_unicast','TransportProtocol':'UDP'},'ProfileToken':token})
-            return suri.replace("://", "://%s:%s@" % (self.values['user'].data, self.values['%s_passwd'%OID].data))
+            return suri.replace("://", "://%s:%s@" % (self.values['user'].data, self.values['passwd'%OID].data))
         except Exception:
             logger.exception('[%s] - Exception when get_stream_uri')
             return None

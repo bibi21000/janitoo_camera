@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """The camera Bus
-It handle all communications to the onewire bus
+It handle all communications to the cameras.
+
+Need opencv > 2.4 (Ubuntu 14.04, ...)
 
 """
 
@@ -73,4 +75,4 @@ class CameraThread(JNTBusThread):
         """
         self.section = OID
         from janitoo_camera.bus import CameraBus
-        self.bus = CameraBus(options=self.options, oid=self.section, name='SMS Manager bus', product_name="SMS controller", product_type="Core thread")
+        self.bus = CameraBus(options=self.options, oid=self.section, name='Camera Manager bus', product_name="Camera controller", product_type="Core thread")
