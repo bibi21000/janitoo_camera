@@ -167,7 +167,7 @@ class NetworkCameraComponent(CameraComponent):
         """Check that the component is 'available'
 
         """
-        return self.values['ip_ping'].data
+        return self.values['%s_ip_ping'%OID].data
 
 class OnvifComponent(NetworkCameraComponent):
     """ An Onvif camera component"""
@@ -186,13 +186,13 @@ class OnvifComponent(NetworkCameraComponent):
     def get_stream_uri(self, node_uuid, index):
         """ Retrieve stream_uri """
         try:
-            mycam = ONVIFCamera(self.values['ip_ping_config'].data, self.values['port'].data, self.values['user'].data, self.values['passwd'].data, wsdl_dir='/usr/local/wsdl/')
+            mycam = ONVIFCamera(self.values['%s_ip_ping_config'%OID].data, self.values['%s_port'%OID].data, self.values['%s_user'%OID].data, self.values['%s_passwd'%OID].data, wsdl_dir='/usr/local/wsdl/')
             media_service = mycam.create_media_service()
             profiles = media_service.GetProfiles()
             # Use the first profile and Profiles have at least one
             token = profiles[0]._token
             suri = media_service.GetStreamUri({'StreamSetup':{'StreamType':'RTP_unicast','TransportProtocol':'UDP'},'ProfileToken':token})
-            return suri.replace("://", "://%s:%s@" % (self.values['user'].data, self.values['passwd'].data))
+            return suri.replace("://", "://%s:%s@" % (self.values['user'].data, self.values['%s_passwd'%OID].data))
         except Exception:
             logger.exception('[%s] - Exception when get_stream_uri')
             return None
