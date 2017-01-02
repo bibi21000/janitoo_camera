@@ -67,9 +67,17 @@ class CameraComponent(JNTComponent):
         product_name = kwargs.pop('product_name', "Generic camera")
         hearbeat = kwargs.pop('hearbeat', 900)
         bus = kwargs.pop('bus', None)
+        default_blank_image = kwargs.pop('default_blank_image', "blank.pgm")
         JNTComponent.__init__(self, oid=oid, bus=bus, name=name, hearbeat=hearbeat,
                 product_name=product_name, **kwargs)
         logger.debug("[%s] - __init__ node uuid:%s", self.__class__.__name__, self.uuid)
+        uuid="%s_blank_image"%OID
+        self.values[uuid] = self.value_factory['config_string'](options=self.options, uuid=uuid,
+            node_uuid=self.uuid,
+            help='The blank image',
+            label='Blk img',
+            default=default_blank_image,
+        )
 
     def check_heartbeat(self):
         """Check that the component is 'available'
@@ -110,7 +118,7 @@ class NetworkCameraComponent(CameraComponent):
         CameraComponent.__init__(self, oid=oid, name=name, hearbeat=hearbeat,
                 product_name=product_name, **kwargs)
         logger.debug("[%s] - __init__ node uuid:%s", self.__class__.__name__, self.uuid)
-        uuid="ip_ping"
+        uuid="%s_ip_ping"%OID
         self.values[uuid] = self.value_factory['ip_ping'](options=self.options, uuid=uuid,
             node_uuid=self.uuid,
             help='Ping the network camera',
@@ -121,21 +129,21 @@ class NetworkCameraComponent(CameraComponent):
         self.values[config_value.uuid] = config_value
         poll_value = self.values[uuid].create_poll_value()
         self.values[poll_value.uuid] = poll_value
-        uuid="user"
+        uuid="%s_user"%OID
         self.values[uuid] = self.value_factory['config_string'](options=self.options, uuid=uuid,
             node_uuid=self.uuid,
             help='The user of your camera',
             label='User',
             default=default_user,
         )
-        uuid="passwd"
+        uuid="%s_passwd"%OID
         self.values[uuid] = self.value_factory['config_string'](options=self.options, uuid=uuid,
             node_uuid=self.uuid,
             help='The passwd of your camera',
             label='Pwd',
             default=default_passwd,
         )
-        uuid="streamuri"
+        uuid="%s_streamuri"%OID
         self.values[uuid] = self.value_factory['sensor_string'](options=self.options, uuid=uuid,
             node_uuid=self.uuid,
             help='The stream URI of your camera',
@@ -143,7 +151,7 @@ class NetworkCameraComponent(CameraComponent):
             default=None,
             get_data_cb=self.get_stream_uri,
         )
-        uuid="port"
+        uuid="%s_port"%OID
         self.values[uuid] = self.value_factory['config_integer'](options=self.options, uuid=uuid,
             node_uuid=self.uuid,
             help='The port of your camera',
