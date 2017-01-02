@@ -31,6 +31,9 @@ logger = logging.getLogger(__name__)
 import os
 import time
 import datetime
+
+import cv2
+import imutils
 from onvif import ONVIFCamera
 
 from janitoo.bus import JNTBus
@@ -72,6 +75,24 @@ class CameraComponent(JNTComponent):
         """Check that the component is 'available'
         """
         return True
+
+    def start(self, mqttc):
+        """Start the component.
+
+        """
+        dirname='.'
+        if 'home_dir' in self.options.data and self.options.data['home_dir'] is not None:
+            dirname = self.options.data['home_dir']
+        dirname = os.path.join(dirname, self.oid)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        return JNTComponent.start(self, mqttc)
+
+    def stop(self):
+        """Stop the component.
+
+        """
+        return JNTComponent.stop(self)
 
 class NetworkCameraComponent(CameraComponent):
     """ A network Camera component"""
@@ -162,10 +183,12 @@ class OnvifComponent(NetworkCameraComponent):
             profiles = media_service.GetProfiles()
             # Use the first profile and Profiles have at least one
             token = profiles[0]._token
-            return media_service.GetStreamUri({'StreamSetup':{'StreamType':'RTP_unicast','TransportProtocol':'UDP'},'ProfileToken':token})
+            suri = media_service.GetStreamUri({'StreamSetup':{'StreamType':'RTP_unicast','TransportProtocol':'UDP'},'ProfileToken':token})
+            return suri.replace("://", "://%s:%s@" % (self.values['user'].data, self.values['passwd'].data))
         except Exception:
-            logger.exception('[%s] - Exception when checking heartbeat')
+            logger.exception('[%s] - Exception when get_stream_uri')
             return None
+
     #~ def check_heartbeat(self):
         #~ """Check that the component is 'available'
         #~ """

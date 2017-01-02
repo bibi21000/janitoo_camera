@@ -56,6 +56,6 @@ class TestCameraSerser(JNTTServer, JNTTServerCommon):
     server_conf = "tests/data/janitoo_camera.conf"
     hadds = [HADD%(34,0), HADD%(34,1)]
 
-    #~ def test_040_server_start_no_error_in_log(self):
-        #~ self.onlyRasperryTest()
-        #~ JNTTServerCommon.test_040_server_start_no_error_in_log(self)
+    def test_040_server_start_no_error_in_log(self):
+        JNTTServerCommon.test_040_server_start_no_error_in_log(self)
+        self.assertDir("/tmp/janitoo_test/home/camera")
