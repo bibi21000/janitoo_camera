@@ -193,7 +193,7 @@ travis-deps:
 	pip install coveralls
 	git clone https://github.com/bibi21000/janitoo_opencv.git
 	make -C janitoo_opencv deps
-	make -C janitoo_opencv develop >/dev/null
+	make -C janitoo_opencv develop
 	@echo
 	@echo "Travis dependencies for ${MODULENAME} installed."
 
