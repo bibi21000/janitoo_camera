@@ -258,7 +258,7 @@ class OnvifComponent(NetworkCameraComponent):
             suri = media_service.GetStreamUri({'StreamSetup':{'StreamType':'RTP_unicast','TransportProtocol':'UDP'},'ProfileToken':token})
             return suri.replace("://", "://%s:%s@" % (self.values['user'].data, self.values['passwd'].data))
         except Exception:
-            logger.exception('[%s] - Exception when get_stream_uri')
+            logger.exception('[%s] - Exception when get_stream_uri', self.__class__.__name__)
             return None
 
     #~ def check_heartbeat(self):
