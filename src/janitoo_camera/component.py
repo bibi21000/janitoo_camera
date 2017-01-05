@@ -127,7 +127,7 @@ class CameraComponent(JNTComponent):
         try:
             if self.http_server is None:
                 self.http_server = HttpServerThread("http_server", self.options.data)
-                self.http_server.config(host=self.values["host"%OID].data, port=self.values["port"%OID].data)
+                self.http_server.config(host=self.values["host"].data, port=self.values["port"].data)
                 self.http_server.start()
                 self.export_attrs('http_server', self.http_server)
                 return True
@@ -231,7 +231,7 @@ class NetworkCameraComponent(CameraComponent):
         """Check that the component is 'available'
 
         """
-        return self.values['ip_ping'%OID].data
+        return self.values['ip_ping'].data
 
 class OnvifComponent(NetworkCameraComponent):
     """ An Onvif camera component"""
@@ -250,13 +250,13 @@ class OnvifComponent(NetworkCameraComponent):
     def get_stream_uri(self, node_uuid, index):
         """ Retrieve stream_uri """
         try:
-            mycam = ONVIFCamera(self.values['ip_ping_config'%OID].data, self.values['port'%OID].data, self.values['user'%OID].data, self.values['passwd'%OID].data, wsdl_dir='/usr/local/wsdl/')
+            mycam = ONVIFCamera(self.values['ip_ping_config'].data, self.values['port'].data, self.values['user'].data, self.values['passwd'].data, wsdl_dir='/usr/local/wsdl/')
             media_service = mycam.create_media_service()
             profiles = media_service.GetProfiles()
             # Use the first profile and Profiles have at least one
             token = profiles[0]._token
             suri = media_service.GetStreamUri({'StreamSetup':{'StreamType':'RTP_unicast','TransportProtocol':'UDP'},'ProfileToken':token})
-            return suri.replace("://", "://%s:%s@" % (self.values['user'].data, self.values['passwd'%OID].data))
+            return suri.replace("://", "://%s:%s@" % (self.values['user'].data, self.values['passwd'].data))
         except Exception:
             logger.exception('[%s] - Exception when get_stream_uri')
             return None
