@@ -136,8 +136,8 @@ class CameraComponent(JNTComponent):
 
     def stop(self):
         """ Stop the bus """
-        JNTBus.stop(self)
-        self.stop_http_server()
+        JNTComponent.stop(self)
+        #~ self.stop_http_server()
 
     def stop_stream(self):
         """ Stop the http server """
