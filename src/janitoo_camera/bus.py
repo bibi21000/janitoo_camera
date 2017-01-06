@@ -60,10 +60,20 @@ from janitoo_camera import OID
 class CameraBus(JNTBus):
     """A pseudo-bus to manage all sms
     """
-    def __init__(self, manager_id=None, **kwargs):
+    def __init__(self, **kwargs):
         """
         :param int manager_id: the id of the manager
         :param kwargs: parameters
         """
         JNTBus.__init__(self, **kwargs)
 
+    def start(self, mqttc, trigger_thread_reload_cb=None):
+        """ Start the bus"""
+        dirname = self.oid
+        if self.options is not None and \
+          'home_dir' in self.options.data and \
+          self.options.data['home_dir'] is not None:
+            dirname = os.path.join(self.options.data['home_dir'], self.oid)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        JNTBus.start(self, mqttc, trigger_thread_reload_cb)
