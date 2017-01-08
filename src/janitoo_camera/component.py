@@ -100,7 +100,7 @@ class CameraComponent(JNTComponent):
         """
         return True
 
-    def start_stream(self, node_uuid, index):
+    def start_stream(self, node_uuid=None, index=0):
         """ Start the stream capture """
         self._camera_lock.acquire()
         try:
@@ -116,7 +116,7 @@ class CameraComponent(JNTComponent):
         JNTComponent.stop(self)
         self.stop_stream()
 
-    def stop_stream(self, node_uuid, index):
+    def stop_stream(self, node_uuid=None, index=0):
         """ Stop the stream capture """
         self._camera_lock.acquire()
         try:
@@ -136,9 +136,9 @@ class CameraComponent(JNTComponent):
         """
         params = {}
         if data == "start":
-            self.start_stream(None, None)
+            self.start_stream()
         elif data == "stop":
-            self.stop_stream(None, None)
+            self.stop_stream()
         elif data == "init":
             pass
 
