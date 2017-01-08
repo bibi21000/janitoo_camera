@@ -93,78 +93,54 @@ class CameraComponent(JNTComponent):
             genre=0x01,
         )
         self._camera_lock =  threading.Lock()
+        self.camera_cap =  None
 
     def check_heartbeat(self):
         """Check that the component is 'available'
         """
         return True
 
-    def start(self, mqttc):
-        """Start the component.
-
-        """
-        dirname='.'
-        if 'home_dir' in self.options.data and self.options.data['home_dir'] is not None:
-            dirname = self.options.data['home_dir']
-        dirname = os.path.join(dirname, self.oid)
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
-        return JNTComponent.start(self, mqttc)
-
-    def reload_stream(self):
-        """ Reload the http server """
-        self.http_acquire()
+    def start_stream(self, node_uuid, index):
+        """ Start the stream capture """
+        self._camera_lock.acquire()
         try:
-            if self.http_server is not None:
-                self.http_server.trigger_reload()
+            if self.camera_cap is None:
+                self.camera_cap = cv2.VideoCapture(self.get_stream_uri(self, node_uuid, index))
+                self.export_attrs('camera_cap', self.camera_cap)
                 return True
         finally:
-            self.http_release()
-
-    def start_stream(self):
-        """ Start the http server """
-        self.http_acquire()
-        try:
-            if self.http_server is None:
-                self.http_server = HttpServerThread("http_server", self.options.data)
-                self.http_server.config(host=self.values["host"].data, port=self.values["port"].data)
-                self.http_server.start()
-                self.export_attrs('http_server', self.http_server)
-                return True
-        finally:
-            self.http_release()
+            self._camera_lock.release()
 
     def stop(self):
         """ Stop the bus """
         JNTComponent.stop(self)
-        #~ self.stop_http_server()
+        self.stop_stream()
 
-    def stop_stream(self):
-        """ Stop the http server """
-        self.http_acquire()
+    def stop_stream(self, node_uuid, index):
+        """ Stop the stream capture """
+        self._camera_lock.acquire()
         try:
-            if self.http_server is not None:
+            if self.camera_cap is not None:
                 try:
-                    self.http_server.stop()
+                    self.camera_cap.release()
                 except Exception:
-                    logger.exception("[%s] - stop_server:%s", self.__class__.__name__)
-                self.http_server = None
-                self.export_attrs('http_server', self.http_server)
+                    logger.exception("[%s] - stop_stream:%s", self.__class__.__name__)
+                self.camera_cap = None
+                self.export_attrs('camera_cap', self.camera_cap)
                 return True
         finally:
-            self.http_release()
+            self._camera_lock.release()
 
     def set_action(self, node_uuid, index, data):
         """Act on the server
         """
         params = {}
         if data == "start":
-            if self.mqttc is not None:
-                self.start_http_server()
+            self.start_stream(None, None)
         elif data == "stop":
-            self.stop_http_server()
-        elif data == "reload":
-            self.reload_http_server()
+            self.stop_stream(None, None)
+        elif data == "init":
+            pass
 
 class NetworkCameraComponent(CameraComponent):
     """ A network Camera component"""

@@ -66,6 +66,7 @@ class CameraBus(JNTBus):
         :param kwargs: parameters
         """
         JNTBus.__init__(self, **kwargs)
+        self.directory = None
 
     def start(self, mqttc, trigger_thread_reload_cb=None):
         """ Start the bus"""
@@ -76,4 +77,5 @@ class CameraBus(JNTBus):
             dirname = os.path.join(self.options.data['home_dir'], self.oid)
         if not os.path.exists(dirname):
             os.makedirs(dirname)
+        self.directory = dirname
         JNTBus.start(self, mqttc, trigger_thread_reload_cb)
