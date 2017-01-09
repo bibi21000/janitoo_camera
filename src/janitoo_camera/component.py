@@ -282,7 +282,7 @@ class OnvifComponent(NetworkCameraComponent):
                 #~ frame = imutils.resize(frame, width=500)
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 gray = cv2.GaussianBlur(gray, (21, 21), 0)
-                cv2.imwrite(self.values['blank_image'].data, gray)
+                cv2.imwrite(os.path.join(self._bus.directory, self.values['blank_image'].data), gray)
             logger.debug('[%s] - Stop capture', self.__class__.__name__)
             self.stop_cap()
         except Exception:
