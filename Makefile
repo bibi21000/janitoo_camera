@@ -191,11 +191,11 @@ travis-deps:
 	pip install git+git://github.com/bibi21000/janitoo_nosetests@master
 	pip install git+git://github.com/bibi21000/janitoo_nosetests_flask@master
 	pip install coveralls
-	git clone https://github.com/bibi21000/janitoo_opencv.git
-	make -C janitoo_opencv deps
-	make -C janitoo_opencv travis-deps
-	make -C janitoo_opencv travis-build
-	make -C janitoo_opencv tests
+	#git clone https://github.com/bibi21000/janitoo_opencv.git
+	#make -C janitoo_opencv deps
+	#make -C janitoo_opencv travis-deps
+	#make -C janitoo_opencv travis-build
+	#make -C janitoo_opencv tests
 	@echo
 	@echo "Travis dependencies for ${MODULENAME} installed."
 

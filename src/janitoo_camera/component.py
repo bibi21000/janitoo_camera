@@ -33,8 +33,8 @@ import time
 import datetime
 import threading
 
-import imutils
 from onvif import ONVIFCamera
+import imutils
 import cv2
 
 from janitoo.bus import JNTBus
@@ -125,6 +125,10 @@ class CameraComponent(JNTComponent):
         """ Stop the stream capture """
         pass
 
+    def init_cap(self, node_uuid=None, index=0):
+        """ Init the stream capture """
+        pass
+
     def set_action(self, node_uuid, index, data):
         """Act on the server
         """
@@ -134,7 +138,7 @@ class CameraComponent(JNTComponent):
         elif data == "stop":
             self.stop_cap()
         elif data == "init":
-            pass
+            self.init_cap()
 
 class NetworkCameraComponent(CameraComponent):
     """ A network Camera component"""
@@ -182,7 +186,7 @@ class NetworkCameraComponent(CameraComponent):
             node_uuid=self.uuid,
             help='The port of your camera',
             label='Port',
-            default=default_passwd,
+            default=default_port,
         )
 
     def check_heartbeat(self):
@@ -208,13 +212,14 @@ class OnvifComponent(NetworkCameraComponent):
     def get_stream_uri(self, node_uuid, index):
         """ Retrieve stream_uri """
         try:
+            logger.debug('[%s] - Connect to camera %s:%s', self.__class__.__name__, self.values['ip_ping_config'].data, self.values['port'].data)
             mycam = ONVIFCamera(self.values['ip_ping_config'].data, self.values['port'].data, self.values['user'].data, self.values['passwd'].data, wsdl_dir='/usr/local/wsdl/')
             media_service = mycam.create_media_service()
             profiles = media_service.GetProfiles()
             # Use the first profile and Profiles have at least one
             token = profiles[0]._token
             suri = media_service.GetStreamUri({'StreamSetup':{'StreamType':'RTP_unicast','TransportProtocol':'UDP'},'ProfileToken':token})
-            return suri.replace("://", "://%s:%s@" % (self.values['user'].data, self.values['passwd'].data))
+            return suri.Uri.replace("://", "://%s:%s@" % (self.values['user'].data, self.values['passwd'].data))
         except Exception:
             logger.exception('[%s] - Exception when get_stream_uri', self.__class__.__name__)
             return None
@@ -224,9 +229,11 @@ class OnvifComponent(NetworkCameraComponent):
         self._camera_lock.acquire()
         try:
             if self.camera_cap is None:
-                self.camera_cap = cv2.VideoCapture(self.get_stream_uri(self, node_uuid, index))
-                self.export_attrs('camera_cap', self.camera_cap)
+                self.camera_cap = cv2.VideoCapture(self.get_stream_uri(node_uuid, index))
+                #~ self.export_attrs('camera_cap', self.camera_cap)
                 return True
+        except Exception:
+            logger.exception('[%s] - Exception when start_cap', self.__class__.__name__)
         finally:
             self._camera_lock.release()
 
@@ -239,12 +246,34 @@ class OnvifComponent(NetworkCameraComponent):
                 try:
                     self.camera_cap.release()
                 except Exception:
-                    logger.exception("[%s] - stop_cap:%s", self.__class__.__name__)
+                    logger.exception("[%s] - camera_cap.release()", self.__class__.__name__)
                 self.camera_cap = None
-                self.export_attrs('camera_cap', self.camera_cap)
+                #~ self.export_attrs('camera_cap', self.camera_cap)
                 return True
+        except Exception:
+            logger.exception('[%s] - Exception when stop_cap', self.__class__.__name__)
         finally:
             self._camera_lock.release()
+
+    def init_cap(self, node_uuid=None, index=0):
+        """ Init the stream capture """
+        try:
+            if self.camera_cap is not None:
+                return
+            logger.debug('[%s] - Start capture', self.__class__.__name__)
+            self.start_cap()
+            logger.debug('[%s] - Grab frame', self.__class__.__name__)
+            (grabbed, frame) = self.camera_cap.read()
+            if grabbed:
+                logger.debug('[%s] - Frame grabbed', self.__class__.__name__)
+                #~ frame = imutils.resize(frame, width=500)
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                gray = cv2.GaussianBlur(gray, (21, 21), 0)
+                cv2.imwrite(self.values['blank_image'].data, gray)
+            logger.debug('[%s] - Stop capture', self.__class__.__name__)
+            self.stop_cap()
+        except Exception:
+            logger.exception('[%s] - Exception when init_cap', self.__class__.__name__)
 
     #~ def check_heartbeat(self):
         #~ """Check that the component is 'available'

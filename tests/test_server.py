@@ -45,6 +45,18 @@ from janitoo.utils import TOPIC_VALUES_USER, TOPIC_VALUES_CONFIG, TOPIC_VALUES_S
 
 from janitoo.server import JNTServer
 
+##############################################################
+#Check that we are in sync with the official command classes
+#Must be implemented for non-regression
+from janitoo.classes import COMMAND_DESC
+
+COMMAND_NOTIFY = 0x3010
+COMMAND_CAMERA_STREAM = 0x2203
+
+assert(COMMAND_DESC[COMMAND_NOTIFY] == 'COMMAND_NOTIFY')
+assert(COMMAND_DESC[COMMAND_CAMERA_STREAM] == 'COMMAND_CAMERA_STREAM')
+##############################################################
+
 class TestCameraSerser(JNTTServer, JNTTServerCommon):
     """Test the server
     """
@@ -59,3 +71,14 @@ class TestCameraSerser(JNTTServer, JNTTServerCommon):
     def test_040_server_start_no_error_in_log(self):
         JNTTServerCommon.test_040_server_start_no_error_in_log(self)
         self.assertDir("/tmp/janitoo_test/home/camera")
+
+    def test_100_request_cap_init(self):
+        self.start()
+        try:
+            self.assertHeartbeatNode(hadd=self.hadds[1])
+            time.sleep(1)
+            self.assertNodeRequest(cmd_class=COMMAND_CAMERA_STREAM, is_writeonly=True, genre=0x02, uuid='actions', data="init", node_hadd=self.hadds[1], client_hadd=HADD%(9999,0), timeout=15)
+            self.assertFile("/tmp/janitoo_test/home/camera/blank.pgm")
+        finally:
+            self.stop()
+
