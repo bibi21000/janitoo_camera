@@ -33,7 +33,7 @@ import time
 import datetime
 import threading
 
-from onvif import ONVIFCamera
+import onvif
 import imutils
 import cv2
 
@@ -221,7 +221,7 @@ class OnvifComponent(NetworkCameraComponent):
         """ Retrieve stream_uri """
         try:
             logger.debug('[%s] - Connect to camera %s:%s', self.__class__.__name__, self.values['ip_ping_config'].data, self.values['port'].data)
-            mycam = ONVIFCamera(
+            mycam = onvif.ONVIFCamera(
                 self.values['ip_ping_config'].data,
                 self.values['port'].data,
                 self.values['user'].data,
