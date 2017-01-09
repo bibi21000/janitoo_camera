@@ -206,6 +206,14 @@ class OnvifComponent(NetworkCameraComponent):
         product_name = kwargs.pop('product_name', "Onvif camera")
         NetworkCameraComponent.__init__(self, oid=oid, name=name,
                 product_name=product_name, **kwargs)
+        default_wsdl_dir = kwargs.pop('default_wsdl_dir', None)
+        uuid="wsdl_dir"
+        self.values[uuid] = self.value_factory['config_string'](options=self.options, uuid=uuid,
+            node_uuid=self.uuid,
+            help='The wsdl directory',
+            label='Dir',
+            default=default_wsdl_dir,
+        )
         self.mycam = None
         #~ self.mycam = ONVIFCamera(self.values['ip_ping_config'].data, self.values['port'].data, self.values['user'].data, self.values['passwd'].data, wsdl_dir='/usr/local/wsdl/')
 
@@ -213,7 +221,12 @@ class OnvifComponent(NetworkCameraComponent):
         """ Retrieve stream_uri """
         try:
             logger.debug('[%s] - Connect to camera %s:%s', self.__class__.__name__, self.values['ip_ping_config'].data, self.values['port'].data)
-            mycam = ONVIFCamera(self.values['ip_ping_config'].data, self.values['port'].data, self.values['user'].data, self.values['passwd'].data, wsdl_dir='/usr/local/wsdl/')
+            mycam = ONVIFCamera(
+                self.values['ip_ping_config'].data,
+                self.values['port'].data,
+                self.values['user'].data,
+                self.values['passwd'].data,
+                wsdl_dir=self.values['wsdl_dir'].data)
             media_service = mycam.create_media_service()
             profiles = media_service.GetProfiles()
             # Use the first profile and Profiles have at least one
