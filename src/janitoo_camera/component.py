@@ -81,6 +81,14 @@ class CameraComponent(JNTComponent):
             label='Blk img',
             default=default_blank_image,
         )
+        uuid="streamuri"
+        self.values[uuid] = self.value_factory['sensor_string'](options=self.options, uuid=uuid,
+            node_uuid=self.uuid,
+            help='The stream URI of your camera',
+            label='Stream',
+            default=None,
+            get_data_cb=self.get_stream_uri,
+        )
         uuid="actions"
         self.values[uuid] = self.value_factory['action_list'](options=self.options, uuid=uuid,
             node_uuid=self.uuid,
@@ -95,50 +103,36 @@ class CameraComponent(JNTComponent):
         self._camera_lock =  threading.Lock()
         self.camera_cap =  None
 
+    def get_stream_uri(self, node_uuid, index):
+        """ Retrieve stream_uri """
+        return None
+
     def check_heartbeat(self):
         """Check that the component is 'available'
         """
         return True
 
-    def start_stream(self, node_uuid=None, index=0):
-        """ Start the stream capture """
-        self._camera_lock.acquire()
-        try:
-            if self.camera_cap is None:
-                self.camera_cap = cv2.VideoCapture(self.get_stream_uri(self, node_uuid, index))
-                self.export_attrs('camera_cap', self.camera_cap)
-                return True
-        finally:
-            self._camera_lock.release()
-
     def stop(self):
         """ Stop the bus """
         JNTComponent.stop(self)
-        self.stop_stream()
+        self.stop_cap()
 
-    def stop_stream(self, node_uuid=None, index=0):
+    def start_cap(self, node_uuid=None, index=0):
+        """ Start the stream capture """
+        pass
+
+    def stop_cap(self, node_uuid=None, index=0):
         """ Stop the stream capture """
-        self._camera_lock.acquire()
-        try:
-            if self.camera_cap is not None:
-                try:
-                    self.camera_cap.release()
-                except Exception:
-                    logger.exception("[%s] - stop_stream:%s", self.__class__.__name__)
-                self.camera_cap = None
-                self.export_attrs('camera_cap', self.camera_cap)
-                return True
-        finally:
-            self._camera_lock.release()
+        pass
 
     def set_action(self, node_uuid, index, data):
         """Act on the server
         """
         params = {}
         if data == "start":
-            self.start_stream()
+            self.start_cap()
         elif data == "stop":
-            self.stop_stream()
+            self.stop_cap()
         elif data == "init":
             pass
 
@@ -183,14 +177,6 @@ class NetworkCameraComponent(CameraComponent):
             label='Pwd',
             default=default_passwd,
         )
-        uuid="streamuri"
-        self.values[uuid] = self.value_factory['sensor_string'](options=self.options, uuid=uuid,
-            node_uuid=self.uuid,
-            help='The stream URI of your camera',
-            label='Stream',
-            default=None,
-            get_data_cb=self.get_stream_uri,
-        )
         uuid="port"
         self.values[uuid] = self.value_factory['config_integer'](options=self.options, uuid=uuid,
             node_uuid=self.uuid,
@@ -198,10 +184,6 @@ class NetworkCameraComponent(CameraComponent):
             label='Port',
             default=default_passwd,
         )
-
-    def get_stream_uri(self, node_uuid, index):
-        """ Retrieve stream_uri """
-        return None
 
     def check_heartbeat(self):
         """Check that the component is 'available'
@@ -236,6 +218,33 @@ class OnvifComponent(NetworkCameraComponent):
         except Exception:
             logger.exception('[%s] - Exception when get_stream_uri', self.__class__.__name__)
             return None
+
+    def start_cap(self, node_uuid=None, index=0):
+        """ Start the stream capture """
+        self._camera_lock.acquire()
+        try:
+            if self.camera_cap is None:
+                self.camera_cap = cv2.VideoCapture(self.get_stream_uri(self, node_uuid, index))
+                self.export_attrs('camera_cap', self.camera_cap)
+                return True
+        finally:
+            self._camera_lock.release()
+
+
+    def stop_cap(self, node_uuid=None, index=0):
+        """ Stop the stream capture """
+        self._camera_lock.acquire()
+        try:
+            if self.camera_cap is not None:
+                try:
+                    self.camera_cap.release()
+                except Exception:
+                    logger.exception("[%s] - stop_cap:%s", self.__class__.__name__)
+                self.camera_cap = None
+                self.export_attrs('camera_cap', self.camera_cap)
+                return True
+        finally:
+            self._camera_lock.release()
 
     #~ def check_heartbeat(self):
         #~ """Check that the component is 'available'
