@@ -206,7 +206,7 @@ class OnvifComponent(NetworkCameraComponent):
         product_name = kwargs.pop('product_name', "Onvif camera")
         NetworkCameraComponent.__init__(self, oid=oid, name=name,
                 product_name=product_name, **kwargs)
-        default_wsdl_dir = kwargs.pop('default_wsdl_dir', None)
+        default_wsdl_dir = kwargs.pop('default_wsdl_dir', os.path.join(os.path.dirname(onvif.__path__[0]), 'wsdl'))
         uuid="wsdl_dir"
         self.values[uuid] = self.value_factory['config_string'](options=self.options, uuid=uuid,
             node_uuid=self.uuid,
