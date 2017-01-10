@@ -73,6 +73,7 @@ class TestCameraSerser(JNTTServer, JNTTServerCommon):
         self.assertDir("/tmp/janitoo_test/home/camera")
 
     def test_100_request_cap_init(self):
+        self.skipCITest()
         self.start()
         try:
             self.assertHeartbeatNode(hadd=self.hadds[1])
