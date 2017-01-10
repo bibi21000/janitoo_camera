@@ -79,10 +79,8 @@ class TestCameraSerser(JNTTServer, JNTTServerCommon):
             self.assertHeartbeatNodes(hadds=[self.hadds[1], self.hadds[1]])
             time.sleep(1)
             self.assertNodeRequest(cmd_class=COMMAND_CAMERA_STREAM, is_writeonly=True, genre=0x02, uuid='actions', data="init", node_hadd=self.hadds[2], client_hadd=HADD%(9999,0), timeout=15)
-            time.sleep(10)
             self.assertFile("/tmp/janitoo_test/home/camera/blank2.pgm")
             self.assertNodeRequest(cmd_class=COMMAND_CAMERA_STREAM, is_writeonly=True, genre=0x02, uuid='actions', data="init", node_hadd=self.hadds[1], client_hadd=HADD%(9999,0), timeout=15)
-            time.sleep(10)
             self.assertFile("/tmp/janitoo_test/home/camera/blank.pgm")
         finally:
             self.stop()
