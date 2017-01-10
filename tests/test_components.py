@@ -61,3 +61,8 @@ class TestCameraOnvif(JNTTComponent, JNTTComponentCommon):
         #~ self.assertNotEqual(comp, None)
         #~ comp.set_notify(None, 0, 'test camera', userid='11111111111', passwd='xxxxxxxxxxxxxxxx')
         #~ self.assertTrue(comp.check_heartbeat())
+
+class TestCameraIpc(JNTTComponent, JNTTComponentCommon):
+    """Test the component
+    """
+    component_name = 'camera.ipc'

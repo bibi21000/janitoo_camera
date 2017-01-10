@@ -95,6 +95,7 @@ setup(
     entry_points = {
         "janitoo.components": [
             "camera.onvif = janitoo_camera.component:make_onvif",
+            "camera.ipc = janitoo_camera.component:make_ipc",
         ],
         "janitoo.threads": [
             "camera = janitoo_camera.thread:make_thread",

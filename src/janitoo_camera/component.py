@@ -59,6 +59,9 @@ from janitoo_camera import OID
 def make_onvif(**kwargs):
     return OnvifComponent(**kwargs)
 
+def make_ipc(**kwargs):
+    return IpcComponent(**kwargs)
+
 class CameraComponent(JNTComponent):
     """ A Camera component"""
 
@@ -119,15 +122,54 @@ class CameraComponent(JNTComponent):
 
     def start_cap(self, node_uuid=None, index=0):
         """ Start the stream capture """
-        pass
+        self._camera_lock.acquire()
+        try:
+            if self.camera_cap is None:
+                self.camera_cap = cv2.VideoCapture(self.get_stream_uri(node_uuid, index))
+                #~ self.export_attrs('camera_cap', self.camera_cap)
+                return True
+        except Exception:
+            logger.exception('[%s] - Exception when start_cap', self.__class__.__name__)
+        finally:
+            self._camera_lock.release()
+
 
     def stop_cap(self, node_uuid=None, index=0):
         """ Stop the stream capture """
-        pass
+        self._camera_lock.acquire()
+        try:
+            if self.camera_cap is not None:
+                try:
+                    self.camera_cap.release()
+                except Exception:
+                    logger.exception("[%s] - camera_cap.release()", self.__class__.__name__)
+                self.camera_cap = None
+                #~ self.export_attrs('camera_cap', self.camera_cap)
+                return True
+        except Exception:
+            logger.exception('[%s] - Exception when stop_cap', self.__class__.__name__)
+        finally:
+            self._camera_lock.release()
 
     def init_cap(self, node_uuid=None, index=0):
         """ Init the stream capture """
-        pass
+        try:
+            if self.camera_cap is not None:
+                return
+            logger.debug('[%s] - Start capture', self.__class__.__name__)
+            self.start_cap()
+            logger.debug('[%s] - Grab frame', self.__class__.__name__)
+            (grabbed, frame) = self.camera_cap.read()
+            if grabbed:
+                logger.debug('[%s] - Frame grabbed', self.__class__.__name__)
+                #~ frame = imutils.resize(frame, width=500)
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                gray = cv2.GaussianBlur(gray, (21, 21), 0)
+                cv2.imwrite(os.path.join(self._bus.directory, self.values['blank_image'].data), gray)
+            logger.debug('[%s] - Stop capture', self.__class__.__name__)
+            self.stop_cap()
+        except Exception:
+            logger.exception('[%s] - Exception when init_cap', self.__class__.__name__)
 
     def set_action(self, node_uuid, index, data):
         """Act on the server
@@ -214,8 +256,6 @@ class OnvifComponent(NetworkCameraComponent):
             label='Dir',
             default=default_wsdl_dir,
         )
-        self.mycam = None
-        #~ self.mycam = ONVIFCamera(self.values['ip_ping_config'].data, self.values['port'].data, self.values['user'].data, self.values['passwd'].data, wsdl_dir='/usr/local/wsdl/')
 
     def get_stream_uri(self, node_uuid, index):
         """ Retrieve stream_uri """
@@ -237,57 +277,6 @@ class OnvifComponent(NetworkCameraComponent):
             logger.exception('[%s] - Exception when get_stream_uri', self.__class__.__name__)
             return None
 
-    def start_cap(self, node_uuid=None, index=0):
-        """ Start the stream capture """
-        self._camera_lock.acquire()
-        try:
-            if self.camera_cap is None:
-                self.camera_cap = cv2.VideoCapture(self.get_stream_uri(node_uuid, index))
-                #~ self.export_attrs('camera_cap', self.camera_cap)
-                return True
-        except Exception:
-            logger.exception('[%s] - Exception when start_cap', self.__class__.__name__)
-        finally:
-            self._camera_lock.release()
-
-
-    def stop_cap(self, node_uuid=None, index=0):
-        """ Stop the stream capture """
-        self._camera_lock.acquire()
-        try:
-            if self.camera_cap is not None:
-                try:
-                    self.camera_cap.release()
-                except Exception:
-                    logger.exception("[%s] - camera_cap.release()", self.__class__.__name__)
-                self.camera_cap = None
-                #~ self.export_attrs('camera_cap', self.camera_cap)
-                return True
-        except Exception:
-            logger.exception('[%s] - Exception when stop_cap', self.__class__.__name__)
-        finally:
-            self._camera_lock.release()
-
-    def init_cap(self, node_uuid=None, index=0):
-        """ Init the stream capture """
-        try:
-            if self.camera_cap is not None:
-                return
-            logger.debug('[%s] - Start capture', self.__class__.__name__)
-            self.start_cap()
-            logger.debug('[%s] - Grab frame', self.__class__.__name__)
-            (grabbed, frame) = self.camera_cap.read()
-            if grabbed:
-                logger.debug('[%s] - Frame grabbed', self.__class__.__name__)
-                #~ frame = imutils.resize(frame, width=500)
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                gray = cv2.GaussianBlur(gray, (21, 21), 0)
-                cv2.imwrite(os.path.join(self._bus.directory, self.values['blank_image'].data), gray)
-            logger.debug('[%s] - Stop capture', self.__class__.__name__)
-            self.stop_cap()
-        except Exception:
-            logger.exception('[%s] - Exception when init_cap', self.__class__.__name__)
-
     #~ def check_heartbeat(self):
         #~ """Check that the component is 'available'
         #~ """
@@ -305,3 +294,24 @@ class OnvifComponent(NetworkCameraComponent):
         #~ except Exception:
             #~ logger.exception('[%s] - Exception when checking heartbeat')
             #~ return False
+
+class IpcComponent(NetworkCameraComponent):
+    """ An IPC camera component"""
+
+    def __init__(self, **kwargs):
+        """
+        """
+        oid = kwargs.pop('oid', '%s.ipc'%OID)
+        name = kwargs.pop('name', "IPC (Maginon) camera")
+        product_name = kwargs.pop('product_name', "IPC (Maginon) camera")
+        NetworkCameraComponent.__init__(self, oid=oid, name=name,
+                product_name=product_name, **kwargs)
+
+    def get_stream_uri(self, node_uuid, index):
+        """ Retrieve stream_uri """
+        try:
+            logger.debug('[%s] - Connect to camera %s', self.__class__.__name__, self.values['ip_ping_config'].data)
+            return "http://%s/videostream.cgi?user=%s&pwd=%s"%(self.values['ip_ping_config'].data, self.values['user'].data, self.values['passwd'].data)
+        except Exception:
+            logger.exception('[%s] - Exception when get_stream_uri', self.__class__.__name__)
+            return None

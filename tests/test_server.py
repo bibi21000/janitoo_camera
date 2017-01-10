@@ -66,7 +66,7 @@ class TestCameraSerser(JNTTServer, JNTTServerCommon):
     broker_password = 'toto'
     server_class = JNTServer
     server_conf = "tests/data/janitoo_camera.conf"
-    hadds = [HADD%(34,0), HADD%(34,1)]
+    hadds = [HADD%(34,0), HADD%(34,1), HADD%(34,2)]
 
     def test_040_server_start_no_error_in_log(self):
         JNTTServerCommon.test_040_server_start_no_error_in_log(self)
@@ -76,8 +76,10 @@ class TestCameraSerser(JNTTServer, JNTTServerCommon):
         self.skipCITest()
         self.start()
         try:
-            self.assertHeartbeatNode(hadd=self.hadds[1])
+            self.assertHeartbeatNodes(hadds=[self.hadds[1], self.hadds[1]])
             time.sleep(1)
+            self.assertNodeRequest(cmd_class=COMMAND_CAMERA_STREAM, is_writeonly=True, genre=0x02, uuid='actions', data="init", node_hadd=self.hadds[2], client_hadd=HADD%(9999,0), timeout=15)
+            self.assertFile("/tmp/janitoo_test/home/camera/blank2.pgm")
             self.assertNodeRequest(cmd_class=COMMAND_CAMERA_STREAM, is_writeonly=True, genre=0x02, uuid='actions', data="init", node_hadd=self.hadds[1], client_hadd=HADD%(9999,0), timeout=15)
             self.assertFile("/tmp/janitoo_test/home/camera/blank.pgm")
         finally:
