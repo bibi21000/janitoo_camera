@@ -159,7 +159,12 @@ class CameraComponent(JNTComponent):
             logger.debug('[%s] - Start capture', self.__class__.__name__)
             self.start_cap()
             logger.debug('[%s] - Grab frame', self.__class__.__name__)
+            max_frame = 5
             (grabbed, frame) = self.camera_cap.read()
+            while not grabbed and max_frame>0:
+                (grabbed, frame) = self.camera_cap.read()
+                logger.debug('[%s] - Grab next frame', self.__class__.__name__)
+                max_frame -= 1
             if grabbed:
                 logger.debug('[%s] - Frame grabbed', self.__class__.__name__)
                 #~ frame = imutils.resize(frame, width=500)
