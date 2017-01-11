@@ -104,7 +104,13 @@ class CameraComponent(JNTComponent):
             genre=0x01,
         )
         self._camera_lock =  threading.Lock()
+        self._thread_lock =  threading.Lock()
         self.camera_cap =  None
+        self.thread_cap =  None
+        self.thread_stop =  threading.Event()
+        self.first_frame =  None
+        self.init_frames = 5
+        self.out_file = None
 
     def get_stream_uri(self, node_uuid, index):
         """ Retrieve stream_uri """
@@ -122,24 +128,103 @@ class CameraComponent(JNTComponent):
 
     def start_cap(self, node_uuid=None, index=0):
         """ Start the stream capture """
+        self._thread_lock.acquire()
+        if self.thread_cap is not None:
+            return
+        self._start_cap()
+        self.thread_stop.clear()
+        try:
+            self.first_frame = cv2.imread(self.values['blank_image'].data, flags=cv2.IMREAD_GRAYSCALE)
+            self.thread_cap = threading.Thread(target=self._thread_cap)
+            self.out_file = cv2.VideoWriter('occupied.avi', -1, 20.0, (640,480))
+            self.thread_cap.start()
+        except Exception:
+            logger.exception('[%s] - Exception when start_cap', self.__class__.__name__)
+        finally:
+            self._thread_lock.release()
+
+    def stop_cap(self, node_uuid=None, index=0):
+        """ Stop the stream capture """
+        self._thread_lock.acquire()
+        try:
+            self.thread_stop.set()
+            if self.thread_cap is not None:
+                self.thread_cap.join()
+            self.thread_cap = None
+            self.first_frame = None
+            self._stop_cap()
+            if self.out_file is not None:
+                self.out_file.release()
+        except Exception:
+            logger.exception('[%s] - Exception when stop_cap', self.__class__.__name__)
+        finally:
+            self._thread_lock.release()
+
+    def _thread_cap(self):
+        """ The thread capture """
+        while not self.thread_stop.is_set():
+            try:
+                # grab the current frame
+                (grabbed, frame) = self.camera_cap.read()
+                motion = False
+
+                # resize the frame, convert it to grayscale, and blur it
+                #~ frame = imutils.resize(frame, width=500)
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                gray = cv2.GaussianBlur(gray, (21, 21), 0)
+
+                # if the first frame is None, initialize it
+                if self.first_frame is None:
+                    self.first_frame = gray
+                    continue
+
+                # compute the absolute difference between the current frame and
+                # first frame
+                frameDelta = cv2.absdiff(self.first_frame, gray)
+                thresh = cv2.threshold(frameDelta, 25, 255, cv2.THRESH_BINARY)[1]
+
+                # dilate the thresholded image to fill in holes, then find contours
+                # on thresholded image
+                thresh = cv2.dilate(thresh, None, iterations=2)
+                (_, cnts, _) = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+                # loop over the contours
+                for c in cnts:
+                    # if the contour is too small, ignore it
+                    if cv2.contourArea(c) < 500:
+                        continue
+
+                    # compute the bounding box for the contour, draw it on the frame,
+                    # and update the text
+                    (x, y, w, h) = cv2.boundingRect(c)
+                    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                    motion = True
+                if motion:
+                    self.out_file.write(frame)
+            except Exception:
+                logger.exception('[%s] - Exception in _thread_cap', self.__class__.__name__)
+
+    def _start_cap(self, node_uuid=None, index=0):
+        """ Start the stream capture """
         self._camera_lock.acquire()
         try:
             if self.camera_cap is None:
+                logger.debug('[%s] - Start capture', self.__class__.__name__)
                 self.camera_cap = cv2.VideoCapture(self.get_stream_uri(node_uuid, index))
                 #~ self.export_attrs('camera_cap', self.camera_cap)
                 return True
         except Exception:
-            logger.exception('[%s] - Exception when start_cap', self.__class__.__name__)
+            logger.exception('[%s] - Exception when _start_cap', self.__class__.__name__)
         finally:
             self._camera_lock.release()
 
-
-    def stop_cap(self, node_uuid=None, index=0):
+    def _stop_cap(self, node_uuid=None, index=0):
         """ Stop the stream capture """
         self._camera_lock.acquire()
         try:
             if self.camera_cap is not None:
                 try:
+                    logger.debug('[%s] - Stop capture', self.__class__.__name__)
                     self.camera_cap.release()
                 except Exception:
                     logger.exception("[%s] - camera_cap.release()", self.__class__.__name__)
@@ -147,7 +232,7 @@ class CameraComponent(JNTComponent):
                 #~ self.export_attrs('camera_cap', self.camera_cap)
                 return True
         except Exception:
-            logger.exception('[%s] - Exception when stop_cap', self.__class__.__name__)
+            logger.exception('[%s] - Exception when _stop_cap', self.__class__.__name__)
         finally:
             self._camera_lock.release()
 
@@ -156,10 +241,9 @@ class CameraComponent(JNTComponent):
         try:
             if self.camera_cap is not None:
                 return
-            logger.debug('[%s] - Start capture', self.__class__.__name__)
-            self.start_cap()
-            logger.debug('[%s] - Grab frame', self.__class__.__name__)
-            max_frame = 5
+            self._start_cap()
+            logger.debug('[%s] - Grab first frame', self.__class__.__name__)
+            max_frame = self.init_frames
             (grabbed, frame) = self.camera_cap.read()
             while not grabbed and max_frame>0:
                 (grabbed, frame) = self.camera_cap.read()
@@ -171,8 +255,7 @@ class CameraComponent(JNTComponent):
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 gray = cv2.GaussianBlur(gray, (21, 21), 0)
                 cv2.imwrite(os.path.join(self._bus.directory, self.values['blank_image'].data), gray)
-            logger.debug('[%s] - Stop capture', self.__class__.__name__)
-            self.stop_cap()
+            self._stop_cap()
         except Exception:
             logger.exception('[%s] - Exception when init_cap', self.__class__.__name__)
 
@@ -277,6 +360,7 @@ class OnvifComponent(NetworkCameraComponent):
             # Use the first profile and Profiles have at least one
             token = profiles[0]._token
             suri = media_service.GetStreamUri({'StreamSetup':{'StreamType':'RTP_unicast','TransportProtocol':'UDP'},'ProfileToken':token})
+            logger.debug('[%s] - Get URI %s', self.__class__.__name__, suri.Uri)
             return suri.Uri.replace("://", "://%s:%s@" % (self.values['user'].data, self.values['passwd'].data))
         except Exception:
             logger.exception('[%s] - Exception when get_stream_uri', self.__class__.__name__)
@@ -316,7 +400,8 @@ class IpcComponent(NetworkCameraComponent):
         """ Retrieve stream_uri """
         try:
             logger.debug('[%s] - Connect to camera %s', self.__class__.__name__, self.values['ip_ping_config'].data)
-            return "http://%s/videostream.cgi?user=%s&pwd=%s"%(self.values['ip_ping_config'].data, self.values['user'].data, self.values['passwd'].data)
+            #~ return "http://%s/videostream.cgi?user=%s&pwd=%s&quality=high"%(self.values['ip_ping_config'].data, self.values['user'].data, self.values['passwd'].data)
+            return "http://%s/videostream.cgi?user=%s&pwd=%s&quality=hd"%(self.values['ip_ping_config'].data, self.values['user'].data, self.values['passwd'].data)
         except Exception:
             logger.exception('[%s] - Exception when get_stream_uri', self.__class__.__name__)
             return None

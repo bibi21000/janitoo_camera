@@ -76,12 +76,27 @@ class TestCameraSerser(JNTTServer, JNTTServerCommon):
         self.skipCITest()
         self.start()
         try:
-            self.assertHeartbeatNodes(hadds=[self.hadds[1], self.hadds[1]])
+            self.assertHeartbeatNodes(hadds=[self.hadds[1]])
             time.sleep(1)
             self.assertNodeRequest(cmd_class=COMMAND_CAMERA_STREAM, is_writeonly=True, genre=0x02, uuid='actions', data="init", node_hadd=self.hadds[1], client_hadd=HADD%(9999,0), timeout=15)
             self.assertFile("/tmp/janitoo_test/home/camera/blank.pgm")
+            self.assertNodeRequest(cmd_class=COMMAND_CAMERA_STREAM, is_writeonly=True, genre=0x02, uuid='actions', data="start", node_hadd=self.hadds[1], client_hadd=HADD%(9999,0), timeout=15)
+            time.sleep(30)
+            self.assertNodeRequest(cmd_class=COMMAND_CAMERA_STREAM, is_writeonly=True, genre=0x02, uuid='actions', data="stop", node_hadd=self.hadds[1], client_hadd=HADD%(9999,0), timeout=15)
+        finally:
+            self.stop()
+
+    def test_101_request_cap_init(self):
+        self.skipCITest()
+        self.start()
+        try:
+            self.assertHeartbeatNodes(hadds=[self.hadds[2]])
+            time.sleep(1)
             self.assertNodeRequest(cmd_class=COMMAND_CAMERA_STREAM, is_writeonly=True, genre=0x02, uuid='actions', data="init", node_hadd=self.hadds[2], client_hadd=HADD%(9999,0), timeout=15)
             self.assertFile("/tmp/janitoo_test/home/camera/blank2.pgm")
+            self.assertNodeRequest(cmd_class=COMMAND_CAMERA_STREAM, is_writeonly=True, genre=0x02, uuid='actions', data="start", node_hadd=self.hadds[2], client_hadd=HADD%(9999,0), timeout=15)
+            time.sleep(30)
+            self.assertNodeRequest(cmd_class=COMMAND_CAMERA_STREAM, is_writeonly=True, genre=0x02, uuid='actions', data="stop", node_hadd=self.hadds[2], client_hadd=HADD%(9999,0), timeout=15)
         finally:
             self.stop()
 
