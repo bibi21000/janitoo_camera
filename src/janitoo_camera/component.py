@@ -136,7 +136,8 @@ class CameraComponent(JNTComponent):
         try:
             self.first_frame = cv2.imread(self.values['blank_image'].data, flags=cv2.IMREAD_GRAYSCALE)
             self.thread_cap = threading.Thread(target=self._thread_cap)
-            self.out_file = cv2.VideoWriter('occupied.mkv', -1, 20.0, (640,480))
+            fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+            self.out_file = cv2.VideoWriter('occupied.avi', fourcc, 20.0, (640,480))
             self.thread_cap.start()
         except Exception:
             logger.exception('[%s] - Exception when start_cap', self.__class__.__name__)
