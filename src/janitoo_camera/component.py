@@ -74,6 +74,9 @@ class CameraComponent(JNTComponent):
         hearbeat = kwargs.pop('hearbeat', 900)
         bus = kwargs.pop('bus', None)
         default_blank_image = kwargs.pop('default_blank_image', "blank.pgm")
+        default_occupied_video = kwargs.pop('default_occupied_video', "occupied.avi")
+        default_codec_video = kwargs.pop('default_codec_video', "MJPG")
+        default_contour_min = kwargs.pop('default_contour_min', 500)
         JNTComponent.__init__(self, oid=oid, bus=bus, name=name, hearbeat=hearbeat,
                 product_name=product_name, **kwargs)
         logger.debug("[%s] - __init__ node uuid:%s", self.__class__.__name__, self.uuid)
@@ -83,6 +86,27 @@ class CameraComponent(JNTComponent):
             help='The blank image',
             label='Blk img',
             default=default_blank_image,
+        )
+        uuid="occupied_video"
+        self.values[uuid] = self.value_factory['config_string'](options=self.options, uuid=uuid,
+            node_uuid=self.uuid,
+            help='The result video',
+            label='Video',
+            default=default_occupied_video,
+        )
+        uuid="codec_video"
+        self.values[uuid] = self.value_factory['config_string'](options=self.options, uuid=uuid,
+            node_uuid=self.uuid,
+            help='The codec video',
+            label='codec',
+            default=default_codec_video,
+        )
+        uuid="contour_min"
+        self.values[uuid] = self.value_factory['config_integer'](options=self.options, uuid=uuid,
+            node_uuid=self.uuid,
+            help='The minimal contour length',
+            label='contour',
+            default=default_contour_min,
         )
         uuid="streamuri"
         self.values[uuid] = self.value_factory['sensor_string'](options=self.options, uuid=uuid,
@@ -136,8 +160,8 @@ class CameraComponent(JNTComponent):
         try:
             self.first_frame = cv2.imread(self.values['blank_image'].data, flags=cv2.IMREAD_GRAYSCALE)
             self.thread_cap = threading.Thread(target=self._thread_cap)
-            fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-            self.out_file = cv2.VideoWriter('occupied.avi', fourcc, 20.0, (640,480))
+            fourcc = cv2.VideoWriter_fourcc(*self.values['codec_video'].data)
+            self.out_file = cv2.VideoWriter(os.path.join(self._bus.directory, self.values['occupied_video'].data), fourcc, 20.0, (640,480))
             self.thread_cap.start()
         except Exception:
             logger.exception('[%s] - Exception when start_cap', self.__class__.__name__)
@@ -197,15 +221,17 @@ class CameraComponent(JNTComponent):
                 # loop over the contours
                 for c in cnts:
                     # if the contour is too small, ignore it
-                    if cv2.contourArea(c) < 500:
+                    if cv2.contourArea(c) < self.values['contour_min'].data:
+                        logger.debug('[%s] - Ignore too small contour', self.__class__.__name__)
                         continue
 
                     # compute the bounding box for the contour, draw it on the frame,
                     # and update the text
                     (x, y, w, h) = cv2.boundingRect(c)
-                    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 1)
                     motion = True
                 if motion:
+                    logger.debug('[%s] - Motion detected in frame', self.__class__.__name__)
                     self.out_file.write(frame)
             except Exception:
                 logger.exception('[%s] - Exception in _thread_cap', self.__class__.__name__)
