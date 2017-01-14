@@ -200,8 +200,7 @@ class CameraComponent(JNTComponent):
 
                 # resize the frame, convert it to grayscale, and blur it
                 #~ frame = imutils.resize(frame, width=500)
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                gray = cv2.GaussianBlur(gray, (21, 21), 0)
+                gray = self._gausian_transformation(frame)
 
                 # if the first frame is None, initialize it
                 if self.first_frame is None:
@@ -288,13 +287,18 @@ class CameraComponent(JNTComponent):
                 max_frame -= 1
             if grabbed:
                 logger.debug('[%s] - Frame grabbed', self.__class__.__name__)
-                #~ frame = imutils.resize(frame, width=500)
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                gray = cv2.GaussianBlur(gray, (21, 21), 0)
+                gray = self._gausian_transformation(frame)
                 cv2.imwrite(os.path.join(self._bus.directory, self.values['blank_image'].data), gray)
             self._stop_cap()
         except Exception:
             logger.exception('[%s] - Exception when init_cap', self.__class__.__name__)
+
+    def _gausian_transformation(self, frame):
+        """ Apply the gaussiand transformation """
+        #~ frame = imutils.resize(frame, width=500)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray = cv2.GaussianBlur(gray, (21, 21), 0)
+        return gray
 
     def set_action(self, node_uuid, index, data):
         """Act on the server
