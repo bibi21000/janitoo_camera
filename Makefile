@@ -195,7 +195,7 @@ travis-deps:
 	git clone https://github.com/bibi21000/janitoo_opencv.git
 	make -C janitoo_opencv deps >/dev/null
 	make -C janitoo_opencv travis-deps >/dev/null
-	make -C janitoo_opencv travis-build | grep -v "Building C" | grep -v "Leaving directory" | grep -v "Entering directory"
+	make -C janitoo_opencv travis-build|grep -v "Building C"|grep -v "Leaving directory"|grep -v "Entering directory"
 	make -C janitoo_opencv tests
 	@echo
 	@echo "Travis dependencies for ${MODULENAME} installed."
