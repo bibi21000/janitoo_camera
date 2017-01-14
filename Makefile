@@ -193,9 +193,9 @@ travis-deps:
 	pip install coveralls
 	#Travis does not have the cv2 wrapper (only the old cv wrapper)
 	git clone https://github.com/bibi21000/janitoo_opencv.git
-	make -C janitoo_opencv deps
-	make -C janitoo_opencv travis-deps
-	make -C janitoo_opencv travis-build
+	make -C janitoo_opencv deps >/dev/null
+	make -C janitoo_opencv travis-deps >/dev/null
+	make -C janitoo_opencv travis-build >/dev/null
 	make -C janitoo_opencv tests
 	@echo
 	@echo "Travis dependencies for ${MODULENAME} installed."
