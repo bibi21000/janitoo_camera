@@ -75,8 +75,8 @@ class CameraComponent(JNTComponent):
         bus = kwargs.pop('bus', None)
         default_blank_image = kwargs.pop('default_blank_image', "blank.pgm")
         default_occupied_video = kwargs.pop('default_occupied_video', "occupied.avi")
-        default_codec_video = kwargs.pop('default_codec_video', "MJPG")
-        default_contour_min = kwargs.pop('default_contour_min', 500)
+        default_codec_video = kwargs.pop('default_codec_video', "XVID")
+        default_contour_min = kwargs.pop('default_contour_min', 700)
         JNTComponent.__init__(self, oid=oid, bus=bus, name=name, hearbeat=hearbeat,
                 product_name=product_name, **kwargs)
         logger.debug("[%s] - __init__ node uuid:%s", self.__class__.__name__, self.uuid)
