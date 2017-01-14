@@ -160,7 +160,12 @@ class CameraComponent(JNTComponent):
         try:
             self.first_frame = cv2.imread(self.values['blank_image'].data, flags=cv2.IMREAD_GRAYSCALE)
             self.thread_cap = threading.Thread(target=self._thread_cap)
-            fourcc = cv2.VideoWriter_fourcc(*self.values['codec_video'].data)
+            try:
+                #For opencv 2
+                fourcc = cv2.cv.CV_FOURCC(*self.values['codec_video'].data)
+            except Exception:
+                #Quick and dirty fix for opencv 3
+                fourcc = cv2.VideoWriter_fourcc(*self.values['codec_video'].data)
             self.out_file = cv2.VideoWriter(os.path.join(self._bus.directory, self.values['occupied_video'].data), fourcc, 20.0, (640,480))
             self.thread_cap.start()
         except Exception:
