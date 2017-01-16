@@ -83,6 +83,7 @@ setup(
     keywords = "camera",
     packages = find_packages('src', exclude=["scripts", "docs", "config"]),
     include_package_data=True,
+    scripts=['src/scripts/jnt_camera'],
     data_files = data_files,
     package_dir = { '': 'src' },
     install_requires=[
